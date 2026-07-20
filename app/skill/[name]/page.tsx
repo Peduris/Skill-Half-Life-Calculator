@@ -139,13 +139,20 @@ export default async function SkillPage({ params }: { params: Params }) {
           />
         </section>
 
-        {/* Decay rationale */}
+        {/* Decay rationale — prefer skill-level evidence when it diverges from the category. */}
         <section className="bg-surface border border-line rounded-[20px] p-5 sm:p-6 shadow-card">
           <h2 className="font-display text-lg font-bold text-ink-strong">Why it decays this way</h2>
           <p className="mt-1 text-sm text-ink-soft">
             {trend.meaning}. Grounded in the Lightcast category mapping and IBM/WEF half-life tiers.
           </p>
-          {decay ? (
+          {decay && decay.trend !== skill.trend ? (
+            <p className="mt-4 text-sm text-ink leading-relaxed border-l-2 border-decline/50 pl-3">
+              {skill.matchedName} is a named exception inside{" "}
+              <strong>{skill.category}</strong> (category trend: {decay.trend}). Seed data marks
+              this skill as <strong>{skill.trend}</strong> with a ~{skill.half_life_years}-year
+              half-life — specific tools can perish even when the broader category is rising.
+            </p>
+          ) : decay ? (
             <p className="mt-4 text-sm text-ink leading-relaxed border-l-2 border-indigo/40 pl-3">
               {decay.decay_rationale}
             </p>
@@ -166,10 +173,10 @@ export default async function SkillPage({ params }: { params: Params }) {
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-ink-soft">Category trend</dt>
-              <dd className="font-semibold text-ink-strong capitalize">
-                {decay?.trend ?? skill.trend}
-              </dd>
+              <dt className="text-xs uppercase tracking-wide text-ink-soft">
+                {decay && decay.trend !== skill.trend ? "Skill trend" : "Category trend"}
+              </dt>
+              <dd className="font-semibold text-ink-strong capitalize">{skill.trend}</dd>
             </div>
           </dl>
         </section>
@@ -212,7 +219,7 @@ export default async function SkillPage({ params }: { params: Params }) {
               Add this skill →
             </Link>
             <Link
-              href={`/?add=${encodeURIComponent(skill.matchedName)}&compare=1`}
+              href={`/compare?a=${encodeURIComponent(skill.matchedName)}&alabel=You`}
               className="kr-focus inline-flex justify-center border border-line bg-surface text-ink font-semibold rounded-btn px-6 py-3.5 hover:bg-surface-soft transition-colors"
             >
               Compare against a role

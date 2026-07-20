@@ -31,7 +31,6 @@ export default function Home() {
       setAutoCompute(true);
       const url = new URL(window.location.href);
       url.searchParams.delete("add");
-      url.searchParams.delete("compare");
       window.history.replaceState({}, "", url.pathname + url.search);
       return;
     }

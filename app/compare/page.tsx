@@ -30,6 +30,13 @@ function parseList(raw: string | string[] | undefined): string[] {
     .slice(0, MAX);
 }
 
+/** "You outlast" vs "Legacy stack outlasts" — conjugate for second-person labels. */
+function outlastVerb(label: string): "outlast" | "outlasts" {
+  const t = label.trim().toLowerCase();
+  if (t === "you" || t === "yours" || t === "your kit" || t === "we") return "outlast";
+  return "outlasts";
+}
+
 function deltaCopy(aYears: number, bYears: number, aLabel: string, bLabel: string): string {
   const diff = Math.round((aYears - bYears) * 10) / 10;
   const abs = Math.abs(diff).toFixed(1);
@@ -37,9 +44,9 @@ function deltaCopy(aYears: number, bYears: number, aLabel: string, bLabel: strin
     return `${aLabel} and ${bLabel} are essentially tied — within a few months of each other.`;
   }
   if (diff > 0) {
-    return `${aLabel} outlasts ${bLabel} by ${abs} years.`;
+    return `${aLabel} ${outlastVerb(aLabel)} ${bLabel} by ${abs} years.`;
   }
-  return `${bLabel} outlasts ${aLabel} by ${abs} years.`;
+  return `${bLabel} ${outlastVerb(bLabel)} ${aLabel} by ${abs} years.`;
 }
 
 export async function generateMetadata({

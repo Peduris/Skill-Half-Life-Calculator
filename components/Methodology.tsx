@@ -22,8 +22,10 @@ export default function Methodology() {
             2.5–7.5yr / durable &gt;7.5yr) and the WEF Future of Jobs 2025 growing/declining skill lists.
           </li>
           <li>
-            <strong>Blend.</strong> Your headline half-life is the (equal-weighted) average of your
-            skills&apos; half-lives, rounded to one decimal place.
+            <strong>Blend.</strong> Your headline half-life defaults to an equal-weighted average of
+            your skills&apos; half-lives, rounded to one decimal place. An advanced toggle can
+            re-weight toward at-risk (declining / short half-life) skills so the number reflects
+            where you need to act first.
           </li>
           <li>
             <strong>Honesty layer.</strong> Durable human skills — leadership, communication, judgment —
