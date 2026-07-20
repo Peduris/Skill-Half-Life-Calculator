@@ -1,5 +1,12 @@
 import type { ScoredSkill, Trend, TransitionSkill, Verdict } from "./types";
 import { TRANSITION_SKILLS } from "./seed";
+import {
+  CAREER_MAP_URL,
+  JOB_BOARD_URL,
+  RESUME_CHECKER_URL,
+  RESUME_TAILORING_URL,
+  withUtm,
+} from "./config";
 
 /**
  * Deterministic model behind the "Your 2030-Proof Skill Plan" subpage.
@@ -137,7 +144,7 @@ export interface ProductTeaser {
 const PRODUCTS: Record<ProductId, ProductTeaser> = {
   career_map: {
     id: "career_map",
-    href: "https://www.kickresume.com/en/ai-career-map/",
+    href: CAREER_MAP_URL,
     headline: "See where your durable skills could take you",
     body: "Upload your resume and get a personalized map of career paths — with salary ranges, the skills you already have, and exactly what to learn next for each role.",
     cta: "Explore your Career Map",
@@ -145,7 +152,7 @@ const PRODUCTS: Record<ProductId, ProductTeaser> = {
   },
   resume_checker: {
     id: "resume_checker",
-    href: "https://www.kickresume.com/en/resume-checker/",
+    href: RESUME_CHECKER_URL,
     headline: "Is your resume keeping up?",
     body: "Get an instant score, see how your resume compares to ones that actually got people hired, and find out exactly what's holding it back.",
     cta: "Check my resume score",
@@ -153,7 +160,7 @@ const PRODUCTS: Record<ProductId, ProductTeaser> = {
   },
   resume_tailoring: {
     id: "resume_tailoring",
-    href: "https://www.kickresume.com/en/resume-tailoring/",
+    href: RESUME_TAILORING_URL,
     headline: "Got a role in mind for your growing skills?",
     body: "Paste the job ad and let AI rewrite your resume to match it — the right keywords, ATS-friendly formatting, using only what's actually true about you.",
     cta: "Tailor my resume",
@@ -161,7 +168,7 @@ const PRODUCTS: Record<ProductId, ProductTeaser> = {
   },
   job_board: {
     id: "job_board",
-    href: "https://www.kickresume.com/jobs/",
+    href: JOB_BOARD_URL,
     headline: "Ready to put your skills to work?",
     body: "Browse open roles that match what you're good at right now — no need to wait until your skills fully \u201cexpire\u201d to make a move.",
     cta: "Browse jobs",
@@ -179,14 +186,17 @@ const DURABLE_THRESHOLD = 7;
 export function orderedTeasers(verdict: Verdict): ProductTeaser[] {
   let order: ProductId[];
   if (verdict.decliningCount > 0) {
-    // Skills worth repositioning → lead with tailoring, then the career map.
     order = ["resume_tailoring", "career_map", "resume_checker", "job_board"];
   } else if (verdict.headlineHalfLife >= DURABLE_THRESHOLD) {
-    // Durable set → show how far it can take them, then live roles.
     order = ["career_map", "job_board", "resume_checker", "resume_tailoring"];
+  } else if (verdict.headlineHalfLife <= 3) {
+    // Short shelf life → fix the resume first, then map the path.
+    order = ["resume_checker", "resume_tailoring", "career_map", "job_board"];
   } else {
-    // Mixed/default → the safe universal next step.
     order = ["resume_checker", "career_map", "resume_tailoring", "job_board"];
   }
-  return order.map((id) => PRODUCTS[id]);
+  return order.map((id) => ({
+    ...PRODUCTS[id],
+    href: withUtm(PRODUCTS[id].href, `teaser-${id}`),
+  }));
 }

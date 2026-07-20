@@ -3,14 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { localSuggest, STARTER_SKILLS } from "@/lib/local-suggest";
 import { track } from "@/lib/analytics";
+import { RESUME_CHECKER_URL, withUtm } from "@/lib/config";
 
 interface Props {
   onCompute: (skills: string[]) => void;
-  /** Skills to pre-seed from a deep link (`/?add=COBOL` or comma list). */
   initialSkills?: string[];
-  /** Auto-run compute once initial skills are loaded. */
   autoCompute?: boolean;
 }
+
+const NUDGE_KEY = "shl:nudge-dismissed:v1";
 
 export default function SkillInput({ onCompute, initialSkills, autoCompute }: Props) {
   const [skills, setSkills] = useState<string[]>(initialSkills ?? []);
@@ -19,10 +20,35 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+  const [showNudge, setShowNudge] = useState(false);
+  const [nudgeReason, setNudgeReason] = useState<"cv" | "skills" | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const didAuto = useRef(false);
 
-  // Hydrate from URL deep-link if parent didn't pass initialSkills yet.
+  function nudgeDismissed(): boolean {
+    try {
+      return sessionStorage.getItem(NUDGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function dismissNudge() {
+    setShowNudge(false);
+    try {
+      sessionStorage.setItem(NUDGE_KEY, "1");
+    } catch {
+      /* noop */
+    }
+  }
+
+  function revealNudge(reason: "cv" | "skills") {
+    if (nudgeDismissed()) return;
+    setNudgeReason(reason);
+    setShowNudge(true);
+    track("cta_nudge", { reason, action: "shown" }, true);
+  }
+
   useEffect(() => {
     if (initialSkills && initialSkills.length > 0) {
       setSkills((prev) => {
@@ -42,7 +68,13 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
     onCompute(skills);
   }, [autoCompute, skills, onCompute]);
 
-  // Local fuzzy suggestions instantly; augment with Lightcast if configured.
+  useEffect(() => {
+    if (skills.length >= 3 && nudgeReason !== "cv") {
+      revealNudge("skills");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skills.length]);
+
   useEffect(() => {
     const q = query.trim();
     if (q.length < 1) {
@@ -126,7 +158,10 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
         }
         return merged;
       });
-      setUploadMsg(`Found ${extracted.length} skill${extracted.length === 1 ? "" : "s"} in your CV. Edit below, then calculate.`);
+      setUploadMsg(
+        `Found ${extracted.length} skill${extracted.length === 1 ? "" : "s"} in your CV. Edit below, then calculate.`,
+      );
+      revealNudge("cv");
     } catch {
       setUploadMsg("Upload failed. Try again or type your skills.");
     } finally {
@@ -140,10 +175,11 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
     onCompute(skills);
   }
 
+  const nudgeHref = withUtm(RESUME_CHECKER_URL, nudgeReason === "cv" ? "nudge-cv" : "nudge-skills");
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="bg-surface border border-line rounded-[24px] p-5 sm:p-7 shadow-search">
-        {/* Chips */}
         {skills.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {skills.map((s) => (
@@ -164,7 +200,6 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
           </div>
         )}
 
-        {/* Input + dropdown */}
         <div className="relative">
           <input
             value={query}
@@ -175,7 +210,9 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
             onKeyDown={onKeyDown}
             onFocus={() => setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
-            placeholder={skills.length ? "Add another skill…" : "Type a skill, e.g. Python, Leadership, Welding…"}
+            placeholder={
+              skills.length ? "Add another skill…" : "Type a skill, e.g. Python, Leadership, Welding…"
+            }
             className="kr-focus w-full bg-surface border border-line focus:border-ring rounded-btn px-4 py-3 text-base outline-none transition-colors placeholder:text-ink-soft"
             aria-label="Add a skill"
           />
@@ -199,10 +236,42 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
           )}
         </div>
 
-        {/* Starter suggestions */}
+        {showNudge && (
+          <div className="mt-4 relative rounded-[14px] border border-indigo/25 bg-indigo/5 px-4 py-3 pr-10">
+            <button
+              type="button"
+              onClick={dismissNudge}
+              aria-label="Dismiss"
+              className="kr-focus absolute top-2 right-2 w-7 h-7 rounded-full text-ink-soft hover:bg-surface text-lg leading-none"
+            >
+              ×
+            </button>
+            <p className="text-sm font-semibold text-ink-strong">
+              {nudgeReason === "cv"
+                ? "While we score your skills — free resume check"
+                : "Building a skill list? See if your resume keeps up"}
+            </p>
+            <p className="mt-1 text-xs text-ink-soft leading-relaxed">
+              Kickresume scores your CV against ones that got people hired. Takes about a minute —
+              then come back and hit calculate.
+            </p>
+            <a
+              href={nudgeHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track("cta_nudge", { reason: nudgeReason, action: "click" })}
+              className="kr-focus mt-2.5 inline-flex text-sm font-semibold text-indigo hover:text-primary-active"
+            >
+              Check my resume score →
+            </a>
+          </div>
+        )}
+
         {skills.length === 0 && (
           <div className="mt-4">
-            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-ink-soft mb-2">Try one</p>
+            <p className="text-xs uppercase tracking-[0.14em] font-semibold text-ink-soft mb-2">
+              Try one
+            </p>
             <div className="flex flex-wrap gap-2">
               {STARTER_SKILLS.map((s) => (
                 <button
@@ -219,7 +288,6 @@ export default function SkillInput({ onCompute, initialSkills, autoCompute }: Pr
 
         <div className="border-t border-line my-6" />
 
-        {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <button

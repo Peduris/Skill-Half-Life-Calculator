@@ -7,7 +7,7 @@ import { loadVerdict, saveVerdict } from "@/lib/result-store";
 import SkillInput from "@/components/SkillInput";
 import ResultView from "@/components/ResultView";
 import Methodology from "@/components/Methodology";
-import Logo from "@/components/Logo";
+import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
 
 function parseAddParam(): string[] {
   if (typeof window === "undefined") return [];
@@ -63,25 +63,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <header className="w-full border-b border-line bg-surface/80 backdrop-blur sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 h-[68px] flex items-center justify-between">
-          <Logo />
-          <nav className="flex items-center gap-1 sm:gap-2">
-            <a
-              href="/compare"
-              className="kr-focus rounded-btn text-sm font-medium text-ink-soft hover:text-ink transition-colors px-3 py-2"
-            >
-              Compare
-            </a>
-            <a
-              href="#methodology"
-              className="kr-focus rounded-btn text-sm font-medium text-ink-soft hover:text-ink transition-colors px-3 py-2"
-            >
-              Methodology
-            </a>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="px-4 pt-14 pb-8 sm:pt-20">
         <div className="max-w-3xl mx-auto text-center mb-9">
@@ -95,9 +77,8 @@ export default function Home() {
           </h1>
           <p className="mt-5 text-ink-soft text-base sm:text-lg max-w-xl mx-auto text-balance leading-relaxed">
             Enter your skills (or upload your CV) and get your personal{" "}
-            <strong className="text-ink">skill half-life</strong> — grounded in the WEF Future of
-            Jobs 2025 report, IBM&apos;s half-life research, and the Lightcast taxonomy. Then get a
-            plan, not just a verdict.
+            <strong className="text-ink">skill half-life</strong> — then a clear next step on
+            Kickresume: Career Map, resume tools, or open roles that fit what still ages well.
           </p>
         </div>
 
@@ -120,9 +101,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-line py-8 text-center text-xs text-ink-soft">
-        Skill Half-Life Calculator · by Kickresume · Not career advice.
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

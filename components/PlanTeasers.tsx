@@ -19,7 +19,7 @@ export default function PlanTeasers({ teasers, headlineHalfLife }: Props) {
             href={t.href}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => track(t.event, { from: "plan", lead, headline: headlineHalfLife })}
+            onClick={() => track(t.event, { from: "teaser", lead, headline: headlineHalfLife })}
             className={`kr-focus group relative flex flex-col rounded-[20px] border p-5 sm:p-6 transition-colors overflow-hidden ${
               lead
                 ? "border-transparent bg-surface shadow-card ring-1 ring-indigo/25"

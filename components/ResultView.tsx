@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ScoredSkill, Verdict } from "@/lib/types";
-import { CV_REBUILD_URL } from "@/lib/config";
 import { track } from "@/lib/analytics";
 import { saveVerdict } from "@/lib/result-store";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -12,6 +11,7 @@ import { reweightVerdict, type WeightMode } from "@/lib/scoring";
 import { WEIGHT_MODE_LABELS } from "@/lib/weights";
 import SkillCard from "./SkillCard";
 import TrendStats from "./TrendStats";
+import ResultAcquisition from "./ResultAcquisition";
 
 interface Props {
   verdict: Verdict;
@@ -247,11 +247,11 @@ export default function ResultView({ verdict: initialVerdict, onReset }: Props) 
         </div>
       </section>
 
-      {/* CTAs — always a next step, never a bare number */}
+      {/* CTAs — plan first, then Kickresume acquisition */}
       <section id="next-steps" className="scroll-mt-24 flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
         <button
           onClick={goToPlan}
-          className="kr-focus text-center bg-premium-gradient text-white font-semibold rounded-btn px-6 py-4 hover:opacity-95 transition-opacity shadow-card"
+          className="kr-focus text-center border border-line bg-surface text-ink font-semibold rounded-btn px-6 py-4 hover:bg-surface-soft hover:border-line-strong transition-colors"
         >
           See your 2030-proof skill plan →
         </button>
@@ -261,16 +261,9 @@ export default function ResultView({ verdict: initialVerdict, onReset }: Props) 
         >
           Compare vs a role
         </a>
-        <a
-          href={CV_REBUILD_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => track("cta_cv_rebuild", { headline: verdict.headlineHalfLife })}
-          className="kr-focus text-center border border-line bg-surface text-ink font-semibold rounded-btn px-6 py-4 hover:bg-surface-soft hover:border-line-strong transition-colors"
-        >
-          Rebuild your CV around durable skills
-        </a>
       </section>
+
+      <ResultAcquisition verdict={verdict} />
 
       {/* Per-skill cards */}
       <section>

@@ -40,7 +40,10 @@ export type AnalyticsEvent =
   | "cta_calculate_own"
   | "skill_view"
   | "compare_view"
-  | "weight_toggle";
+  | "weight_toggle"
+  | "cta_signup"
+  | "cta_create_resume"
+  | "cta_nudge";
 
 declare global {
   interface Window {
