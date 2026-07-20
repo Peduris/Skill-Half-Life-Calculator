@@ -11,6 +11,8 @@ const LOCAL_POOL: string[] = Array.from(
     "Node.js",
     "Docker",
     "Kubernetes",
+    "COBOL",
+    "Adobe Flash",
     "Agile / Scrum",
     "Product Management",
     "Digital Marketing",

@@ -1,6 +1,8 @@
 import type { ScoredSkill } from "@/lib/types";
 import { expiryYearFor } from "@/lib/scoring";
+import { skillSlug } from "@/lib/skill-pages";
 import TrendBadge from "./TrendBadge";
+import Link from "next/link";
 
 interface Props {
   skill: ScoredSkill;
@@ -11,18 +13,22 @@ export default function SkillCard({ skill, baselineYear }: Props) {
   const expiry = expiryYearFor(skill, baselineYear);
   const low = skill.half_life_years <= 2.5;
   const atRisk = skill.trend === "declining" || skill.half_life_years < 3;
+  const href = `/skill/${skillSlug(skill.matchedName || skill.input)}`;
 
   return (
     <div className="bg-surface border border-line rounded-card p-4 flex flex-col gap-3 relative overflow-hidden shadow-card hover:border-line-strong transition-colors">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="font-semibold text-ink-strong truncate">{skill.input}</h3>
+          <h3 className="font-semibold text-ink-strong truncate">
+            <Link href={href} className="kr-focus hover:text-indigo transition-colors">
+              {skill.input}
+            </Link>
+          </h3>
           <p className="text-xs text-ink-soft truncate">{skill.category}</p>
         </div>
         <TrendBadge trend={skill.trend} />
       </div>
 
-      {/* Best-before pill */}
       <div className="flex items-center gap-2.5">
         <div
           className={`text-xs font-semibold rounded-pill px-2.5 py-1 ${
@@ -31,9 +37,7 @@ export default function SkillCard({ skill, baselineYear }: Props) {
         >
           Best before {expiry}
         </div>
-        <span className="text-xs text-ink-soft">
-          ~{skill.half_life_years} yr half-life
-        </span>
+        <span className="text-xs text-ink-soft">~{skill.half_life_years} yr half-life</span>
       </div>
 
       <p className="text-sm text-ink leading-snug">{skill.one_liner}</p>
@@ -47,6 +51,13 @@ export default function SkillCard({ skill, baselineYear }: Props) {
           {skill.citation}
         </p>
       )}
+
+      <Link
+        href={href}
+        className="kr-focus text-xs font-semibold text-indigo hover:text-primary-active mt-auto"
+      >
+        Skill detail →
+      </Link>
     </div>
   );
 }

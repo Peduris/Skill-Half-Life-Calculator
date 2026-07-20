@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { computeVerdict } from "@/lib/scoring";
 import type { Verdict } from "@/lib/types";
 import { loadVerdict, saveVerdict } from "@/lib/result-store";
@@ -9,52 +9,81 @@ import ResultView from "@/components/ResultView";
 import Methodology from "@/components/Methodology";
 import Logo from "@/components/Logo";
 
+function parseAddParam(): string[] {
+  if (typeof window === "undefined") return [];
+  const sp = new URLSearchParams(window.location.search);
+  const raw = sp.get("add") || "";
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export default function Home() {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [seedSkills, setSeedSkills] = useState<string[]>([]);
+  const [autoCompute, setAutoCompute] = useState(false);
 
-  // Restore a stored result when returning from /plan (Back / Home), so the
-  // results screen is preserved across the route change.
   useEffect(() => {
+    const fromUrl = parseAddParam();
+    if (fromUrl.length > 0) {
+      setSeedSkills(fromUrl);
+      setAutoCompute(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("add");
+      url.searchParams.delete("compare");
+      window.history.replaceState({}, "", url.pathname + url.search);
+      return;
+    }
+
     const restored = loadVerdict();
     if (!restored) return;
     setVerdict(restored);
-    if (typeof window !== "undefined" && window.location.search.includes("view=result")) {
+    if (window.location.search.includes("view=result")) {
       requestAnimationFrame(() => {
         document.getElementById("result")?.scrollIntoView({ behavior: "auto", block: "start" });
       });
     }
   }, []);
 
-  function handleCompute(skills: string[]) {
+  const handleCompute = useCallback((skills: string[]) => {
     const v = computeVerdict(skills);
     setVerdict(v);
     saveVerdict(v);
     requestAnimationFrame(() => {
       document.getElementById("result")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-  }
+  }, []);
 
   function reset() {
     setVerdict(null);
+    setSeedSkills([]);
+    setAutoCompute(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
     <main className="min-h-screen flex flex-col">
-      {/* Header */}
       <header className="w-full border-b border-line bg-surface/80 backdrop-blur sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 h-[68px] flex items-center justify-between">
           <Logo />
-          <a
-            href="#methodology"
-            className="kr-focus rounded-btn text-sm font-medium text-ink-soft hover:text-ink transition-colors"
-          >
-            Methodology
-          </a>
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <a
+              href="/compare"
+              className="kr-focus rounded-btn text-sm font-medium text-ink-soft hover:text-ink transition-colors px-3 py-2"
+            >
+              Compare
+            </a>
+            <a
+              href="#methodology"
+              className="kr-focus rounded-btn text-sm font-medium text-ink-soft hover:text-ink transition-colors px-3 py-2"
+            >
+              Methodology
+            </a>
+          </nav>
         </div>
       </header>
 
-      {/* Hero + input */}
       <section className="px-4 pt-14 pb-8 sm:pt-20">
         <div className="max-w-3xl mx-auto text-center mb-9">
           <div className="inline-flex items-center gap-2 rounded-pill bg-primary-tint px-3.5 py-1.5 text-xs font-semibold text-primary-active mb-6">
@@ -73,29 +102,27 @@ export default function Home() {
           </p>
         </div>
 
-        <SkillInput onCompute={handleCompute} />
+        <SkillInput
+          onCompute={handleCompute}
+          initialSkills={seedSkills}
+          autoCompute={autoCompute}
+        />
       </section>
 
-      {/* Results */}
       {verdict && (
         <section id="result" className="px-4 py-10 scroll-mt-24">
           <ResultView verdict={verdict} onReset={reset} />
         </section>
       )}
 
-      {/* Methodology (always on-page) */}
-      <section className="px-4 py-12 mt-auto">
-        <Methodology />
+      <section id="methodology" className="px-4 py-16 border-t border-line bg-surface-soft scroll-mt-24">
+        <div className="max-w-3xl mx-auto">
+          <Methodology />
+        </div>
       </section>
 
-      <footer className="border-t border-line bg-surface-soft">
-        <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center gap-3 text-center">
-          <Logo />
-          <p className="text-xs text-ink-soft max-w-xl">
-            Built as a conversation-starter about reskilling. Data: WEF Future of Jobs 2025 · IBM IBV ·
-            Lightcast Open Skills. Not career advice.
-          </p>
-        </div>
+      <footer className="border-t border-line py-8 text-center text-xs text-ink-soft">
+        Skill Half-Life Calculator · by Kickresume · Not career advice.
       </footer>
     </main>
   );

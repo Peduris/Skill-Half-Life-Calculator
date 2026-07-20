@@ -13,6 +13,7 @@ import type { SkillPlan } from "@/lib/plan";
 import { orderedTeasers } from "@/lib/plan";
 import { verdictHeadline, overallReasoning, nextMoves } from "@/lib/report";
 import { brandPath, brandPngDataUrl } from "@/lib/pdf-assets";
+import { TREND_COPY } from "@/lib/trends";
 
 interface Props {
   verdict: Verdict;
@@ -40,6 +41,8 @@ const C = {
   soft2: "#f7f8fa",
   indigo: "#514eea",
   indigoSoft: "#eef0ff",
+  subFill: "#c5c9e8",
+  subInk: "#514eea",
   coral: "#ff5e59",
   coralTint: "#fff4f3",
   coralTint2: "#fbe0de",
@@ -59,14 +62,14 @@ const TREND: Record<Trend, { color: string; tint: string; label: string }> = {
   declining: { color: C.decline, tint: C.declineTint, label: "Declining" },
 };
 
-const LABEL_COL = 112;
-const RIGHT_COL = 72;
+const LABEL_COL = 108;
+const RIGHT_COL = 96;
 
 const s = StyleSheet.create({
   page: {
     paddingTop: 58,
     paddingHorizontal: 36,
-    paddingBottom: 88,
+    paddingBottom: 100,
     fontFamily: "Helvetica",
     color: C.inkBody,
     fontSize: 9.5,
@@ -217,6 +220,7 @@ const s = StyleSheet.create({
     color: C.inkSoft,
     marginTop: 1,
   },
+  statMeaning: { fontSize: 6, color: C.inkSoft, marginTop: 1, textAlign: "center" },
 
   sectionGap: { marginTop: 12 },
   sectionHead: {
@@ -227,16 +231,16 @@ const s = StyleSheet.create({
   },
   h2: { fontFamily: "Henk", fontWeight: 700, fontSize: 12, color: C.ink },
   h2Sub: { fontSize: 7.5, color: C.inkSoft, marginTop: 1 },
-  legend: { flexDirection: "row", gap: 8 },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "flex-end" },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 3 },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  legendText: { fontSize: 7, color: C.inkSoft },
+  legendText: { fontSize: 6.5, color: C.inkSoft },
 
   axisRow: { flexDirection: "row", marginBottom: 4 },
   axisTrack: { flex: 1, flexDirection: "row", justifyContent: "space-between" },
   axisYear: { fontSize: 6, color: C.inkFaint },
 
-  tRow: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
+  tRow: { flexDirection: "row", alignItems: "center", marginBottom: 7 },
   tLabelCol: { width: LABEL_COL, paddingRight: 6, alignItems: "flex-end" },
   tName: { fontFamily: "Helvetica-Bold", fontSize: 8, color: C.ink, textAlign: "right" },
   tCat: { fontSize: 6, color: C.inkFaint, textAlign: "right" },
@@ -251,6 +255,7 @@ const s = StyleSheet.create({
     backgroundColor: C.soft,
   },
   tBar: { position: "absolute", left: 0, top: 3, height: 6, borderRadius: 3 },
+  tSubBar: { position: "absolute", top: 3, height: 6, borderRadius: 3, backgroundColor: C.subFill },
   tNowDot: {
     position: "absolute",
     left: 0,
@@ -263,11 +268,10 @@ const s = StyleSheet.create({
   tRightCol: {
     width: RIGHT_COL,
     paddingLeft: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
   },
-  tYear: { fontSize: 7.5, color: C.inkSoft },
+  tYear: { fontSize: 7, color: C.inkSoft },
+  tSubLabel: { fontSize: 6.5, color: C.subInk, marginTop: 1 },
   tFlag: { fontFamily: "Helvetica-Bold", fontSize: 7.5, color: C.decline },
   tFlagDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.decline },
 
@@ -396,7 +400,7 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 36,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 12,
     borderTopWidth: 1,
     borderColor: C.line,
@@ -405,15 +409,19 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: C.dark,
   },
-  footBrand: { flexDirection: "row", alignItems: "center", gap: 7, maxWidth: 340 },
+  footBrand: { flexDirection: "row", alignItems: "center", gap: 7, maxWidth: 300 },
   footMark: { width: 18, height: 18 },
   footLogo: { height: 11, width: 70 },
-  footClaim: { fontSize: 6.5, color: "#c8ccd6", marginTop: 2, maxWidth: 270, lineHeight: 1.3 },
-  footQrWrap: { flexDirection: "row", alignItems: "center", gap: 7 },
-  footQr: { width: 38, height: 38, borderRadius: 3 },
+  footClaim: { fontSize: 6.5, color: "#c8ccd6", marginTop: 2, maxWidth: 230, lineHeight: 1.3 },
+  footQrWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
+  footQr: { width: 56, height: 56, borderRadius: 4 },
   footScan: { fontFamily: "Helvetica-Bold", fontSize: 7, color: C.paper, textAlign: "right" },
   footUrl: { fontSize: 6.5, color: C.coral, textAlign: "right", marginTop: 1 },
 });
+
+function truncatePdf(s: string, n: number): string {
+  return s.length > n ? `${s.slice(0, n - 1)}\u2026` : s;
+}
 
 function Chip({ trend }: { trend: Trend }) {
   const t = TREND[trend];
@@ -506,11 +514,21 @@ export default function PlanDocument({ verdict, plan, qrDataUrl, siteHost }: Pro
   const logoDataUrl = brandPngDataUrl("kickresume-logo.png");
   const logoWhiteDataUrl = brandPngDataUrl("kickresume-logo-white.png");
 
-  const stats = [
-    { label: "Growing", value: verdict.growingCount, color: C.grow, tint: C.growTint },
-    { label: "Stable", value: verdict.stableCount, color: C.stable, tint: C.stableTint },
-    { label: "Declining", value: verdict.decliningCount, color: C.decline, tint: C.declineTint },
-  ];
+  const stats = (
+    ["growing", "stable", "declining"] as const
+  ).map((trend) => ({
+    trend,
+    label: TREND_COPY[trend].label,
+    meaning: TREND_COPY[trend].short,
+    value:
+      trend === "growing"
+        ? verdict.growingCount
+        : trend === "stable"
+          ? verdict.stableCount
+          : verdict.decliningCount,
+    color: TREND[trend].color,
+    tint: TREND[trend].tint,
+  }));
 
   const chrome = {
     markDataUrl,
@@ -551,6 +569,7 @@ export default function PlanDocument({ verdict, plan, qrDataUrl, siteHost }: Pro
               <View key={st.label} style={[s.stat, { backgroundColor: st.tint }]}>
                 <Text style={[s.statNum, { color: st.color }]}>{st.value}</Text>
                 <Text style={s.statLabel}>{st.label}</Text>
+                <Text style={s.statMeaning}>{st.meaning}</Text>
               </View>
             ))}
           </View>
@@ -562,15 +581,23 @@ export default function PlanDocument({ verdict, plan, qrDataUrl, siteHost }: Pro
               <Text style={s.h2}>
                 {plan.startYear}–{plan.endYear} skill timeline
               </Text>
-              <Text style={s.h2Sub}>Best-before year per skill · colored by trend</Text>
+              <Text style={s.h2Sub}>
+                Colored = your skill until half-life · Grey-blue = what replaces it after
+              </Text>
             </View>
             <View style={s.legend}>
               {(["growing", "stable", "declining"] as Trend[]).map((t) => (
                 <View key={t} style={s.legendItem}>
                   <View style={[s.dot, { backgroundColor: TREND[t].color }]} />
-                  <Text style={s.legendText}>{TREND[t].label}</Text>
+                  <Text style={s.legendText}>
+                    {TREND[t].label}: {TREND_COPY[t].short}
+                  </Text>
                 </View>
               ))}
+              <View style={s.legendItem}>
+                <View style={[s.dot, { backgroundColor: C.subFill }]} />
+                <Text style={s.legendText}>Substitution: replaces it after expiry</Text>
+              </View>
             </View>
           </View>
 
@@ -589,26 +616,26 @@ export default function PlanDocument({ verdict, plan, qrDataUrl, siteHost }: Pro
           {plan.rows.map((r, i) => {
             const t = TREND[r.trend];
             const pct = Math.max(4, Math.min(100, (r.expiryPoint / plan.span) * 100));
+            const subPct = Math.max(0, 100 - pct);
             return (
               <View key={`${r.input}-${i}`} style={s.tRow}>
                 <View style={s.tLabelCol}>
-                  <Text style={s.tName}>{r.input}</Text>
-                  <Text style={s.tCat}>{r.category}</Text>
+                  <Text style={s.tName}>{truncatePdf(r.input, 18)}</Text>
+                  <Text style={s.tCat}>{truncatePdf(r.category, 22)}</Text>
                 </View>
                 <View style={s.tTrack}>
                   <View style={s.tBg} />
                   <View style={[s.tBar, { width: `${pct}%`, backgroundColor: t.color }]} />
+                  {subPct > 2 ? (
+                    <View style={[s.tSubBar, { left: `${pct}%`, width: `${subPct}%` }]} />
+                  ) : null}
                   <View style={s.tNowDot} />
                 </View>
                 <View style={s.tRightCol}>
-                  {r.flagged ? (
-                    <>
-                      <View style={s.tFlagDot} />
-                      <Text style={s.tFlag}>{r.expiryYear}</Text>
-                    </>
-                  ) : (
-                    <Text style={s.tYear}>{r.expiryYear}</Text>
-                  )}
+                  <Text style={r.flagged ? s.tFlag : s.tYear}>{r.expiryYear}</Text>
+                  <Text style={s.tSubLabel}>
+                    → {truncatePdf(r.substitute.skill_name, 16)}
+                  </Text>
                 </View>
               </View>
             );
@@ -625,7 +652,7 @@ export default function PlanDocument({ verdict, plan, qrDataUrl, siteHost }: Pro
                     <View style={{ flex: 1 }}>
                       <Text style={s.pivotTitle}>
                         <Text style={{ fontFamily: "Helvetica-Bold" }}>{r.input}</Text> (best
-                        before {r.expiryYear}) {"\u2014"} pivot to{" "}
+                        before {r.expiryYear}) {"\u2014"} replaced by{" "}
                         <Text style={{ fontFamily: "Helvetica-Bold" }}>{r.pivot!.skill_name}</Text>
                       </Text>
                       <Text style={s.pivotWhy}>
@@ -651,7 +678,7 @@ export default function PlanDocument({ verdict, plan, qrDataUrl, siteHost }: Pro
             {verdict.skills.map((sk, i) => (
               <View key={`${sk.input}-${i}`} style={s.skillCard} wrap={false}>
                 <View style={s.skillTop}>
-                  <Text style={s.skillName}>{sk.input}</Text>
+                  <Text style={s.skillName}>{truncatePdf(sk.input, 28)}</Text>
                   <Chip trend={sk.trend} />
                 </View>
                 <Text style={s.skillMeta}>

@@ -37,7 +37,10 @@ export type AnalyticsEvent =
   | "cta_job_board"
   | "shared_view"
   | "shared_copy_link"
-  | "cta_calculate_own";
+  | "cta_calculate_own"
+  | "skill_view"
+  | "compare_view"
+  | "weight_toggle";
 
 declare global {
   interface Window {

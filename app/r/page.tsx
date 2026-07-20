@@ -3,6 +3,7 @@ import Link from "next/link";
 import { computeVerdict } from "@/lib/scoring";
 import { buildPlan, orderedTeasers } from "@/lib/plan";
 import { SITE_URL } from "@/lib/config";
+import { buildShareImageUrl } from "@/lib/share-url";
 import Logo from "@/components/Logo";
 import SkillCard from "@/components/SkillCard";
 import Methodology from "@/components/Methodology";
@@ -10,6 +11,7 @@ import PlanTimelineCard from "@/components/PlanTimelineCard";
 import PlanTeasers from "@/components/PlanTeasers";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import TrackOnce from "@/components/TrackOnce";
+import TrendStats from "@/components/TrendStats";
 
 type SearchParams = Promise<{ skills?: string | string[] }>;
 
@@ -50,7 +52,14 @@ export async function generateMetadata({
   const title = `My skills expire in ${years} years — Skill Half-Life Calculator`;
   const preview = skills.slice(0, 6).join(", ") + (skills.length > 6 ? "…" : "");
   const description = `A shared skill half-life result (${preview}). When do yours expire?`;
-  const img = `/api/share?years=${years}&expiry=${expiry}`;
+  const img = buildShareImageUrl({
+    years,
+    expiry,
+    skills,
+    growing: verdict.growingCount,
+    stable: verdict.stableCount,
+    declining: verdict.decliningCount,
+  });
   const url = `${SITE_URL}/r?skills=${encodeURIComponent(skills.join(","))}`;
 
   return {
@@ -104,25 +113,19 @@ export default async function SharedResultPage({
   const years = verdict.headlineHalfLife.toFixed(1);
   const expiry = verdict.headlineExpiryYear;
 
-  const stats = [
-    { label: "Growing", value: verdict.growingCount, cls: "text-grow", tint: "bg-grow-tint" },
-    { label: "Stable", value: verdict.stableCount, cls: "text-stable", tint: "bg-stable-tint" },
-    { label: "Declining", value: verdict.decliningCount, cls: "text-decline", tint: "bg-decline-tint" },
-  ];
-
   return (
     <main className="min-h-screen flex flex-col bg-surface-soft">
       <TrackOnce event="shared_view" props={{ skillCount: skills.length, headline: verdict.headlineHalfLife }} />
 
-      {/* Top bar */}
+      {/* Top bar — quiet nav link only; primary action lives in the hero CTA */}
       <header className="w-full border-b border-line bg-surface/90 backdrop-blur sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 h-[64px] flex items-center justify-between gap-3">
           <Logo showByline={false} />
           <Link
             href="/"
-            className="kr-focus rounded-btn bg-premium-gradient text-white text-sm font-semibold px-4 py-2 shadow-card hover:opacity-95 transition-opacity"
+            className="kr-focus rounded-btn text-sm font-medium text-ink-soft hover:text-ink hover:bg-surface-soft px-3 py-2 transition-colors"
           >
-            Calculate yours →
+            Home
           </Link>
         </div>
       </header>
@@ -134,17 +137,19 @@ export default async function SharedResultPage({
         </p>
 
         {/* Headline result card (read-only) */}
-        <section className="flex flex-col items-center text-center">
-          <div className="relative bg-surface border border-line rounded-[24px] px-6 sm:px-14 pt-10 pb-9 max-w-xl w-full shadow-card overflow-hidden">
+        <section className="flex flex-col items-center text-center w-full">
+          <div className="relative bg-surface border border-line rounded-[24px] px-5 sm:px-14 pt-10 pb-9 max-w-xl w-full shadow-card overflow-hidden mx-auto">
             <div className="absolute inset-x-0 top-0 h-1.5 bg-premium-gradient" />
             <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.14em] text-ink-soft">
               Their personal skill half-life
             </p>
-            <div className="mt-3 flex items-end justify-center gap-2">
-              <span className="font-display text-7xl sm:text-8xl font-bold text-premium-gradient leading-none">
+            <div className="mt-3 flex items-end justify-center gap-1.5 sm:gap-2">
+              <span className="font-display text-6xl sm:text-8xl font-bold text-premium-gradient leading-none">
                 {years}
               </span>
-              <span className="font-display text-2xl sm:text-3xl font-bold text-ink-soft mb-2">years</span>
+              <span className="font-display text-xl sm:text-3xl font-bold text-ink-soft mb-1.5 sm:mb-2">
+                years
+              </span>
             </div>
             <div className="mt-4 inline-flex items-center gap-2 rounded-pill bg-primary-tint px-3.5 py-1.5 text-sm font-semibold text-primary-active">
               Best before {expiry}
@@ -153,15 +158,12 @@ export default async function SharedResultPage({
               {verdictHeadline(verdict.headlineHalfLife)}
             </p>
 
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              {stats.map((s) => (
-                <div key={s.label} className={`flex flex-col items-center rounded-card ${s.tint} py-3`}>
-                  <span className={`text-2xl font-bold ${s.cls}`}>{s.value}</span>
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-ink-soft">
-                    {s.label}
-                  </span>
-                </div>
-              ))}
+            <div className="mt-6">
+              <TrendStats
+                growing={verdict.growingCount}
+                stable={verdict.stableCount}
+                declining={verdict.decliningCount}
+              />
             </div>
           </div>
 

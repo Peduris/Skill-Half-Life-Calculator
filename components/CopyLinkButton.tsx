@@ -15,7 +15,7 @@ interface Props {
 
 /**
  * Copies a link (the current page by default) with the same graceful fallback
- * as the results share button. Client-only.
+ * and "Copied!" toast as the results share button. Client-only.
  */
 export default function CopyLinkButton({
   url,
@@ -64,6 +64,17 @@ export default function CopyLinkButton({
           className="kr-focus w-full rounded-btn border border-line bg-surface-soft px-3 py-2 text-xs text-ink"
         />
       )}
+
+      {/* Matches the results-page share toast so both surfaces feel consistent. */}
+      <div
+        role="status"
+        aria-live="polite"
+        className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-btn bg-ink-strong px-4 py-2.5 text-sm font-medium text-white shadow-card transition-all duration-200 ${
+          copied ? "opacity-100 translate-y-0" : "pointer-events-none translate-y-2 opacity-0"
+        }`}
+      >
+        ✓ Copied to clipboard
+      </div>
     </div>
   );
 }

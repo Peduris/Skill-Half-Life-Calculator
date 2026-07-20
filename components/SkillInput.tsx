@@ -6,16 +6,41 @@ import { track } from "@/lib/analytics";
 
 interface Props {
   onCompute: (skills: string[]) => void;
+  /** Skills to pre-seed from a deep link (`/?add=COBOL` or comma list). */
+  initialSkills?: string[];
+  /** Auto-run compute once initial skills are loaded. */
+  autoCompute?: boolean;
 }
 
-export default function SkillInput({ onCompute }: Props) {
-  const [skills, setSkills] = useState<string[]>([]);
+export default function SkillInput({ onCompute, initialSkills, autoCompute }: Props) {
+  const [skills, setSkills] = useState<string[]>(initialSkills ?? []);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const didAuto = useRef(false);
+
+  // Hydrate from URL deep-link if parent didn't pass initialSkills yet.
+  useEffect(() => {
+    if (initialSkills && initialSkills.length > 0) {
+      setSkills((prev) => {
+        const set = new Set(prev.map((x) => x.toLowerCase()));
+        const merged = [...prev];
+        for (const s of initialSkills) {
+          if (!set.has(s.toLowerCase())) merged.push(s);
+        }
+        return merged;
+      });
+    }
+  }, [initialSkills]);
+
+  useEffect(() => {
+    if (!autoCompute || didAuto.current || skills.length === 0) return;
+    didAuto.current = true;
+    onCompute(skills);
+  }, [autoCompute, skills, onCompute]);
 
   // Local fuzzy suggestions instantly; augment with Lightcast if configured.
   useEffect(() => {

@@ -66,6 +66,16 @@ export const SEED_SKILLS: SeedSkill[] = [
   { skill_name: "Environmental Impact Assessment", lightcast_category: "Environment", skill_type: "specialized", half_life_years: 8, trend: "growing", one_liner: "Environmental Stewardship posted the largest sector-specific gains in the WEF data." },
   { skill_name: "Public Speaking", lightcast_category: "Media and Communications", skill_type: "common", half_life_years: 8, trend: "stable", one_liner: "AI can write the speech. It still can't deliver it with your timing." },
   { skill_name: "Cybersecurity Compliance (GDPR/SOC2)", lightcast_category: "Law, Regulation, and Compliance", skill_type: "specialized", half_life_years: 5, trend: "growing", one_liner: "Regulation moves slower than tech, but cybersecurity is dragging this one uphill." },
+  // Legacy / declining tech — explicit seed rows so they don't fall through to
+  // the generic IT category (growing) or the 5yr "General Professional" default.
+  { skill_name: "COBOL", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 2, trend: "declining", one_liner: "Still keeping banks awake at night — for all the wrong reasons. Demand is a retirement cliff, not a growth curve." },
+  { skill_name: "Adobe Flash", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 1, trend: "declining", one_liner: "EOL'd by Adobe in 2020. If this is still on your CV, so is a fax number." },
+  { skill_name: "Flash", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 1, trend: "declining", one_liner: "Dead as a format. The only skill left is explaining why you used to know it." },
+  { skill_name: "Perl", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 2, trend: "declining", one_liner: "Write-only language energy. Still lurking in legacy scripts, rarely hiring." },
+  { skill_name: "Visual Basic", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 1.5, trend: "declining", one_liner: "The office macro years are over. Migration projects are the last paycheck." },
+  { skill_name: "AngularJS", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 1.5, trend: "declining", one_liner: "Not Angular — AngularJS. The 1.x era is in long-term support hospice." },
+  { skill_name: "Internet Explorer", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 1, trend: "declining", one_liner: "Retired by Microsoft. Compatibility scars remain; the skill itself does not." },
+  { skill_name: "Silverlight", lightcast_category: "Information Technology", skill_type: "specialized", half_life_years: 1, trend: "declining", one_liner: "Microsoft's Flash competitor. Both lost. Resume archaeology only." },
 ];
 
 export const WEF_SKILLS: WefSkill[] = [

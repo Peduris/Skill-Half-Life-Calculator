@@ -24,7 +24,13 @@ export interface PlanRow {
   /** Rounded calendar year the skill "expires". */
   expiryYear: number;
   flagged: boolean;
-  /** Assigned WEF differentiator to pivot toward (only for flagged rows). */
+  /**
+   * What eventually replaces this skill after its half-life — always assigned
+   * (round-robin over WEF differentiators) so the timeline can paint a
+   * substitution segment past the expiry marker.
+   */
+  substitute: TransitionSkill;
+  /** Same as `substitute` for at-risk rows; null when nothing is flagged. */
   pivot: TransitionSkill | null;
 }
 
@@ -57,21 +63,18 @@ export function buildPlan(verdict: Verdict): SkillPlan {
   const startYear = baselineYear;
   const endYear = baselineYear + span;
 
-  // Round-robin (least-recently-used) cursor over the 6 WEF differentiators, so
-  // multiple at-risk skills don't all get the same pivot unless there are more
-  // than six of them.
+  // Round-robin over the 6 WEF differentiators so every skill gets a distinct
+  // post-half-life substitution (and at-risk skills still get a clear pivot).
   let cursor = 0;
   const usedPivots: TransitionSkill[] = [];
 
   const rows: PlanRow[] = verdict.skills.map((s) => {
     const flagged = isFlagged(s);
-    let pivot: TransitionSkill | null = null;
-    if (flagged && TRANSITION_SKILLS.length > 0) {
-      pivot = TRANSITION_SKILLS[cursor % TRANSITION_SKILLS.length];
-      cursor += 1;
-      if (!usedPivots.some((p) => p.skill_name === pivot!.skill_name)) {
-        usedPivots.push(pivot);
-      }
+    const substitute = TRANSITION_SKILLS[cursor % TRANSITION_SKILLS.length]!;
+    cursor += 1;
+    const pivot = flagged ? substitute : null;
+    if (pivot && !usedPivots.some((p) => p.skill_name === pivot.skill_name)) {
+      usedPivots.push(pivot);
     }
     const expiryYear = Math.round(baselineYear + s.half_life_years);
     return {
@@ -83,6 +86,7 @@ export function buildPlan(verdict: Verdict): SkillPlan {
       expiryPoint: expiryYear - baselineYear,
       expiryYear,
       flagged,
+      substitute,
       pivot,
     };
   });

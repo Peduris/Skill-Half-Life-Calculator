@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { CATEGORY_DECAY, SEED_SKILLS } from "./seed";
+import { blendHeadline, type WeightMode } from "./weights";
 import type {
   CategoryDecay,
   ScoredSkill,
@@ -7,6 +8,8 @@ import type {
   Trend,
   Verdict,
 } from "./types";
+
+export type { WeightMode };
 
 /**
  * Keyword -> Lightcast category map. Used only as a *fallback* when a user's
@@ -346,27 +349,33 @@ function matchCategory(norm: string): CategoryDecay | null {
 /**
  * Blend individual skill scores into the headline verdict.
  *
- * MVP uses EQUAL weighting across skills. A future version could weight by
- * recency/seniority (e.g. how central a skill is to the user's current role) —
- * that hook would go here by passing per-skill weights instead of 1.
+ * Modes:
+ * - equal (default): each skill counts once
+ * - at-risk-emphasis: declining / short-lived skills weigh more so the
+ *   headline tracks what actually shortens your shelf life
  */
-export function computeVerdict(inputs: string[], baselineYear?: number): Verdict {
-  const year = baselineYear ?? new Date().getFullYear();
+export function computeVerdict(
+  inputs: string[],
+  opts?: { baselineYear?: number; weightMode?: WeightMode },
+): Verdict {
+  const year = opts?.baselineYear ?? new Date().getFullYear();
+  const mode = opts?.weightMode ?? "equal";
   const cleaned = inputs.map((s) => s.trim()).filter(Boolean);
   const skills = cleaned.map(scoreSkill);
-
-  const totalWeight = skills.length || 1;
-  const weightedSum = skills.reduce((acc, s) => acc + s.half_life_years /* * weight */, 0);
-  const headlineHalfLife = round1(weightedSum / totalWeight);
+  const headline = blendHeadline(skills, year, mode);
 
   return {
     skills,
-    headlineHalfLife,
     baselineYear: year,
-    headlineExpiryYear: Math.round(year + headlineHalfLife),
-    growingCount: skills.filter((s) => s.trend === "growing").length,
-    stableCount: skills.filter((s) => s.trend === "stable").length,
-    decliningCount: skills.filter((s) => s.trend === "declining").length,
+    ...headline,
+  };
+}
+
+/** Re-blend an existing verdict under a different weight mode (no re-scoring). */
+export function reweightVerdict(verdict: Verdict, weightMode: WeightMode): Verdict {
+  return {
+    ...verdict,
+    ...blendHeadline(verdict.skills, verdict.baselineYear, weightMode),
   };
 }
 

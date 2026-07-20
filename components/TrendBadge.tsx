@@ -1,18 +1,24 @@
 import type { Trend } from "@/lib/types";
-
-const MAP: Record<Trend, { label: string; arrow: string; className: string }> = {
-  growing: { label: "Growing", arrow: "↗", className: "text-grow bg-grow-tint" },
-  stable: { label: "Stable", arrow: "→", className: "text-stable bg-stable-tint" },
-  declining: { label: "Declining", arrow: "↘", className: "text-decline bg-decline-tint" },
-};
+import { TREND_COPY } from "@/lib/trends";
 
 export default function TrendBadge({ trend }: { trend: Trend }) {
-  const t = MAP[trend];
+  const t = TREND_COPY[trend];
+  const arrow = trend === "growing" ? "↗" : trend === "stable" ? "→" : "↘";
+  const className =
+    trend === "growing"
+      ? "text-grow bg-grow-tint"
+      : trend === "stable"
+        ? "text-stable bg-stable-tint"
+        : "text-decline bg-decline-tint";
+
   return (
     <span
-      className={`inline-flex items-center gap-1 text-xs font-semibold rounded-pill px-2.5 py-0.5 ${t.className}`}
+      title={t.meaning}
+      className={`inline-flex items-center gap-1 text-xs font-semibold rounded-pill px-2.5 py-0.5 ${className}`}
     >
-      <span aria-hidden className="text-sm leading-none">{t.arrow}</span>
+      <span aria-hidden className="text-sm leading-none">
+        {arrow}
+      </span>
       {t.label}
     </span>
   );

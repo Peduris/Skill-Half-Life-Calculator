@@ -40,9 +40,11 @@ export async function GET(req: Request) {
   const base = appBaseUrl();
   const siteHost = base.replace(/^https?:\/\//, "");
   // QR sends scanners to the calculator so they can run their own report.
+  // High module count + quiet zone for comfortable print-size scanning (~52pt).
   const qrDataUrl = await QRCode.toDataURL(base, {
-    margin: 1,
-    width: 200,
+    margin: 2,
+    width: 280,
+    errorCorrectionLevel: "M",
     color: { dark: "#081430", light: "#ffffff" },
   });
 

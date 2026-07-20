@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ScoredSkill, Verdict } from "@/lib/types";
 import { CV_REBUILD_URL } from "@/lib/config";
 import { track } from "@/lib/analytics";
 import { saveVerdict } from "@/lib/result-store";
 import { copyToClipboard } from "@/lib/clipboard";
+import { buildShareImageUrl } from "@/lib/share-url";
+import { reweightVerdict, type WeightMode } from "@/lib/scoring";
+import { WEIGHT_MODE_LABELS } from "@/lib/weights";
 import SkillCard from "./SkillCard";
+import TrendStats from "./TrendStats";
 
 interface Props {
   verdict: Verdict;
@@ -21,25 +25,49 @@ function verdictHeadline(years: number): string {
   return "Practically non-perishable. Well done.";
 }
 
-export default function ResultView({ verdict, onReset }: Props) {
+export default function ResultView({ verdict: initialVerdict, onReset }: Props) {
   const router = useRouter();
-  const [skills, setSkills] = useState<ScoredSkill[]>(verdict.skills);
+  const [weightMode, setWeightMode] = useState<WeightMode>("equal");
+  const [verdict, setVerdict] = useState<Verdict>(initialVerdict);
+  const [skills, setSkills] = useState<ScoredSkill[]>(initialVerdict.skills);
   const [copied, setCopied] = useState(false);
   const [manualCopy, setManualCopy] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Keep local verdict in sync when parent hands a fresh compute.
+  useEffect(() => {
+    setSkills(initialVerdict.skills);
+    setVerdict(reweightVerdict(initialVerdict, weightMode));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- weightMode applied via setMode
+  }, [initialVerdict]);
 
   const years = verdict.headlineHalfLife.toFixed(1);
   const expiry = verdict.headlineExpiryYear;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const shareImageUrl = `${origin}/api/share?years=${years}&expiry=${expiry}`;
-  // Permalink that re-renders this exact result from the URL (closes the viral
-  // loop — the shared link opens a real result, not the homepage).
-  const skillsParam = encodeURIComponent(verdict.skills.map((s) => s.input).join(","));
+  const shareImageUrl = buildShareImageUrl({
+    origin,
+    years,
+    expiry,
+    skills: skills.map((s) => s.input),
+    growing: verdict.growingCount,
+    stable: verdict.stableCount,
+    declining: verdict.decliningCount,
+  });
+  const skillsParam = encodeURIComponent(skills.map((s) => s.input).join(","));
   const shareUrl = `${origin}/r?skills=${skillsParam}`;
   const shareText = `My skills expire in ${years} years. When do yours?`;
   const shareBlob = `${shareText} ${shareUrl}`;
+
+  function setMode(mode: WeightMode) {
+    setWeightMode(mode);
+    const next = reweightVerdict({ ...verdict, skills }, mode);
+    setVerdict(next);
+    saveVerdict(next);
+    track("weight_toggle", { mode });
+  }
 
   // Fire the completion event once when results render.
   useEffect(() => {
@@ -143,15 +171,6 @@ export default function ResultView({ verdict, onReset }: Props) {
     }
   }
 
-  const stats = useMemo(
-    () => [
-      { label: "Growing", value: verdict.growingCount, cls: "text-grow", tint: "bg-grow-tint" },
-      { label: "Stable", value: verdict.stableCount, cls: "text-stable", tint: "bg-stable-tint" },
-      { label: "Declining", value: verdict.decliningCount, cls: "text-decline", tint: "bg-decline-tint" },
-    ],
-    [verdict],
-  );
-
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col gap-10">
       {/* Headline result card */}
@@ -172,30 +191,76 @@ export default function ResultView({ verdict, onReset }: Props) {
           </div>
           <p className="mt-4 text-ink-soft text-sm sm:text-base">{verdictHeadline(verdict.headlineHalfLife)}</p>
 
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            {stats.map((s) => (
-              <div key={s.label} className={`flex flex-col items-center rounded-card ${s.tint} py-3`}>
-                <span className={`text-2xl font-bold ${s.cls}`}>{s.value}</span>
-                <span className="text-[11px] font-medium uppercase tracking-wide text-ink-soft">{s.label}</span>
-              </div>
-            ))}
+          <div className="mt-6">
+            <TrendStats
+              growing={verdict.growingCount}
+              stable={verdict.stableCount}
+              declining={verdict.decliningCount}
+            />
           </div>
         </div>
 
         <p className="text-xs text-ink-soft mt-3 max-w-md">
-          Weighted average across {verdict.skills.length} skill
+          {weightMode === "equal" ? "Equal-weighted" : "At-risk-weighted"} average across{" "}
+          {verdict.skills.length} skill
           {verdict.skills.length === 1 ? "" : "s"}. One decimal place — precision is part of the joke.
         </p>
+
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="kr-focus text-xs font-medium text-ink-soft hover:text-indigo underline-offset-2 hover:underline"
+          >
+            {showAdvanced ? "Hide advanced weighting" : "Advanced: change weighting"}
+          </button>
+          {showAdvanced && (
+            <div className="mt-3 mx-auto max-w-md rounded-card border border-line bg-surface p-3 text-left shadow-card">
+              <p className="text-xs text-ink-soft mb-2">
+                How should the headline half-life blend your skills?
+              </p>
+              <div className="flex flex-col gap-2">
+                {(Object.keys(WEIGHT_MODE_LABELS) as WeightMode[]).map((mode) => {
+                  const meta = WEIGHT_MODE_LABELS[mode];
+                  const active = weightMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setMode(mode)}
+                      className={`kr-focus rounded-btn border px-3 py-2 text-left transition-colors ${
+                        active
+                          ? "border-indigo bg-indigo/5 ring-1 ring-indigo/25"
+                          : "border-line hover:bg-surface-soft"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold text-ink-strong">
+                        {meta.title}
+                      </span>
+                      <span className="block text-xs text-ink-soft mt-0.5">{meta.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* CTAs — always a next step, never a bare number */}
-      <section id="next-steps" className="scroll-mt-24 flex flex-col sm:flex-row gap-3 justify-center">
+      <section id="next-steps" className="scroll-mt-24 flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
         <button
           onClick={goToPlan}
           className="kr-focus text-center bg-premium-gradient text-white font-semibold rounded-btn px-6 py-4 hover:opacity-95 transition-opacity shadow-card"
         >
           See your 2030-proof skill plan →
         </button>
+        <a
+          href={`/compare?a=${skillsParam}&alabel=You`}
+          className="kr-focus text-center border border-line bg-surface text-ink font-semibold rounded-btn px-6 py-4 hover:bg-surface-soft hover:border-line-strong transition-colors"
+        >
+          Compare vs a role
+        </a>
         <a
           href={CV_REBUILD_URL}
           target="_blank"
